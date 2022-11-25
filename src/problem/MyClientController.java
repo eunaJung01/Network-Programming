@@ -18,9 +18,9 @@ public class MyClientController {
     private PrintWriter pw;
     private HTTPRequestController rc;
 
-    private String serverURL = "203.252.148.148";
+//    private String serverURL = "203.252.148.148";
     private int port = 80;
-//    private String serverURL = "localhost";
+    private String serverURL = "localhost";
 
     public MyClientController(ProductSystemUI v) {
         this.v = v;

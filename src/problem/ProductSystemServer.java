@@ -1,10 +1,8 @@
 package problem;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -13,7 +11,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 
 import com.google.gson.Gson;
 
@@ -37,6 +34,9 @@ public class ProductSystemServer {
             while (true) {
                 try {
                     // TODO : 요청이 올때마다 Thread 생성하고 Handling 하시오
+                    Socket connection = server.accept();
+                    Callable<Void> task = new HTTPHandler(connection);
+                    pool.submit(task);
 
                 } catch (IOException ex) {
                     logger.log(Level.WARNING, "Exception accepting connection", ex);
@@ -60,30 +60,38 @@ public class ProductSystemServer {
 
         public Void call() throws IOException {
             try {
-
                 // TODO: PrintWrite 객체 this.out, BufferedReader 객체 this.in을 생성하는 코드를 작성하시오. BufferedReader의 인코딩은 UTF-8으로 설정
+                in = new BufferedReader(new InputStreamReader(connection.getInputStream(), "UTF-8"));
+                out = new PrintWriter(connection.getOutputStream());
 
                 StringBuilder s = new StringBuilder();
                 String tmp;
                 String request;
-
                 while ((tmp = in.readLine()) != null) {
                     s.append(tmp + "\r\n");
                 }
-
                 request = s.toString();
 
                 // HTTP 메서드에 따라 분기처리를 하는 파트
-                if (request.indexOf("HTTP/") != -1) {
-                    if (request.indexOf("POST /login") != -1) {
+                if (request.contains("HTTP/")) {
+                    if (request.contains("POST /login")) {
                         String requestBody = request.split("\r\n\r\n")[1];
                         service.login(out, requestBody);
-                    } else if (request.indexOf("GET /") != -1) {
+                    } else if (request.contains("GET /")) {
                         String requestParam = request.toString().split(" ")[1].replace("/", "");
                         service.getProducts(out, requestParam);
                     }
                     // TODO : POST, PATCH(또는 PUT), DELETE API에 대한 분기처리를 작성하시오
-                    else {
+                    else if (request.contains("POST /")) {
+                        String requestBody = request.split("\r\n\r\n")[1];
+                        service.addProduct(out, requestBody);
+                    } else if (request.contains("PATCH /")) {
+                        String requestBody = request.split("\r\n\r\n")[1];
+                        service.updateProduct(out, requestBody);
+                    } else if (request.contains("DELETE /")) {
+                        String requestParam = request.toString().split(" ")[1].replace("/", "");
+                        service.deleteProduct(out, requestParam);
+                    } else {
                         service.setDefaultResponse(out);
                     }
                 }
@@ -99,8 +107,6 @@ public class ProductSystemServer {
             }
             return null;
         }
-
-
     }
 
     public static void main(String[] args) throws IOException {
